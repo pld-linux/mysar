@@ -1,5 +1,5 @@
 Summary:	MySQL Squid Access Report
-Summary(pl.UTF-8):Program raportujący dostęp do Squida
+Summary(pl.UTF-8):	Program raportujący dostęp do Squida
 Name:		mysar
 Version:	2.1.0
 Release:	0.1
@@ -10,9 +10,6 @@ Source0:	http://dl.sourceforge.net/mysar/%{name}-%{version}.tar.gz
 URL:		http://giannis.stoilis.gr/software/mysar/
 BuildRequires:	rpmbuild(macros) >= 1.268
 Requires:	webapps
-%if %{with trigger}
-Requires(triggerpostun):	sed >= 4.0
-%endif
 Requires:	webserver(alias)
 Requires:	webserver(indexfile)
 Requires:	webserver(php)
@@ -24,15 +21,13 @@ BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 %define		_sysconfdir	%{_webapps}/%{_webapp}
 %define		_appdir		%{_datadir}/%{_webapp}
 
-
 %description
 MySQL Squid Access Report, mysar for short, is a reporting system for
 user web traffic activity, as logged from a squid proxy.
 
-
 %description -l pl.UTF-8
-MySQL Squid Access Report, w skr�cie mysar, to system raportujący
-aktywność u�ytkownik�w zalogowaną poprzez squid proxy.
+MySQL Squid Access Report, w skrócie mysar, to system raportujący
+aktywność użytkowników na WWW logowaną poprzez proxy squid.
 
 %prep
 %setup -q -n %{name}
@@ -59,9 +54,12 @@ install lighttpd.conf $RPM_BUILD_ROOT%{_sysconfdir}/lighttpd.conf
 cp -af * $RPM_BUILD_ROOT%{_appdir}
 rm -f $RPM_BUILD_ROOT%{_appdir}/etc/config,ini.example $RPM_BUILD_ROOT%{_appdir}/etc/mysar.cron
 
-install etc/mysar.cron $RPM_BUILD_ROOT/etc/cron.d/
+install etc/mysar.cron $RPM_BUILD_ROOT/etc/cron.d
 install etc/config.ini.example $RPM_BUILD_ROOT%{_sysconfdir}
 ln -sf %{_sysconfdir}/config.ini.example $RPM_BUILD_ROOT%{_appdir}/etc/config,ini.example
+
+%clean
+rm -rf $RPM_BUILD_ROOT
 
 %triggerin -- apache1 < 1.3.37-3, apache1-base
 %webapp_register apache %{_webapp}
@@ -81,16 +79,12 @@ ln -sf %{_sysconfdir}/config.ini.example $RPM_BUILD_ROOT%{_appdir}/etc/config,in
 %triggerun -- lighttpd
 %webapp_unregister lighttpd %{_webapp}
 
-%clean
-rm -rf $RPM_BUILD_ROOT
-
 %files
 %defattr(644,root,root,755)
 %dir %attr(750,root,http) %{_sysconfdir}
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/apache.conf
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/httpd.conf
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/lighttpd.conf
-%attr(640,root,http) %config(noreplace) %verify(not md5 mtime size)
 %dir %{_appdir}
 %{_appdir}/bin
 %{_appdir}/inc
