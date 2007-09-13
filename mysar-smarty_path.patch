@@ -1,0 +1,22 @@
+--- mysar/inc/common.inc.php~	2007-08-17 11:05:19.000000000 +0200
++++ mysar/inc/common.inc.php	2007-09-13 11:12:04.000000000 +0200
+@@ -75,7 +75,7 @@
+ 	require($basePath.'/inc/smarty/Smarty.class.php');
+ 	$smarty=new Smarty;
+ 	$smarty->template_dir=$basePath.'/www-templates';
+-	$smarty->compile_dir=$basePath.'/smarty-tmp';
++	$smarty->compile_dir='/var/lib/mysar/smarty-tmp';
+ 	$smarty->debugging = false;
+ }
+ 
+--- mysar/www/install/index.php~	2007-08-17 11:05:19.000000000 +0200
++++ mysar/www/install/index.php	2007-09-13 11:11:38.000000000 +0200
+@@ -706,7 +706,7 @@
+ 
+ 		break;
+ 	case 'new4':
+-		$smarty_tmp_dir=$basePath.'/smarty-tmp';
++		$smarty_tmp_dir='/var/lib/mysar/smarty-tmp';
+ 		echo 'Checking where smarty template cache directory is writeable...';
+ 		$result1=touch($smarty_tmp_dir.'/mysar.install.test');
+ 		$result2=unlink($smarty_tmp_dir.'/mysar.install.test');

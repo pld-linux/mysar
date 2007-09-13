@@ -1,0 +1,17 @@
+--- mysar/etc/mysar.cron~	2007-08-17 11:05:19.000000000 +0200
++++ mysar/etc/mysar.cron	2007-09-13 12:49:57.000000000 +0200
+@@ -1,11 +1,11 @@
+ # mysar not only runs every minute but it also expects to be run every minute.
+ # If you wish to change this, you need to adjust not only the cron entries below but also the $maxRunTime inside bin/mysar-importer.php
+-* * * * *	root	/usr/local/mysar/bin/mysar-resolver.php > /usr/local/mysar/log/mysar-resolver.log 2>&1
+-0 0 * * *	root	/usr/local/mysar/bin/mysar-maintenance.php > /usr/local/mysar/log/mysar-maintenance.log 2>&1
++* * * * *	root	/usr/share/mysar/bin/mysar-resolver.php > /var/log/mysar/mysar-resolver.log 2>&1
++0 0 * * *	root	/usr/share/mysar/bin/mysar-maintenance.php > /var/log/mysar/mysar-maintenance.log 2>&1
+ 
+ # IMPORTER
+ ## PHP - Slow but tested. The defult choice, for now.
+-* * * * *	root	/usr/local/mysar/bin/mysar-importer.php > /usr/local/mysar/log/mysar-importer.log 2>&1
++* * * * *	root	/usr/share/mysar/bin/mysar-importer.php > /var/log/mysar/mysar-importer.log 2>&1
+ 
+ ## Binary. Fast but untested. Needs compile. Check README.
+ #* * * * *	root	/usr/local/bin/mysar > /usr/local/mysar/log/mysar-importer.log 2>&1
