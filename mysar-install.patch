@@ -1,0 +1,31 @@
+--- mysar/www/install/index.php~	2007-09-13 13:05:47.000000000 +0200
++++ mysar/www/install/index.php	2007-09-13 14:28:20.000000000 +0200
+@@ -696,8 +696,8 @@
+ 
+ 	case 'end':
+ 		echo "Installation is finished!";
+-		echo "<p><b><h3>Now you need to erase the directory \"$basePath/www/install\" before proceeding. If you don't, this wizard will start over again!</h3></b>";
+-		echo "<br>This can be done by executing the following command, as root: rm -rf $basePath/www/install";
++		echo "<p><b><h3>Now you need to uninstall mysar-install package before proceeding. If you don't, this wizard will start over again!</h3></b>";
++		echo "<br>This can be done by executing the following command, as root: rpm -e mysar-install";
+ 		echo "<p>Please visit mysar's main page <a href=\"http://giannis.stoilis.gr/software/mysar/\">http://giannis.stoilis.gr/software/mysar/</a> if you have any problem whatsoever with mysar. You can even drop me a note, telling me what you think about this software. Any opinion is taken under consideration, either positive or negative.
+ <p>Good luck with mysar, I hope it serves you well.
+ <p>--
+--- mysar/www/install/index.php~	2007-09-13 14:31:15.000000000 +0200
++++ mysar/www/install/index.php	2007-09-13 15:24:33.000000000 +0200
+@@ -736,8 +736,13 @@
+ 			echo '<br>dbUser = '.$_REQUEST['dbuser'];
+ 			echo '<br>dbPass = '.$_REQUEST['dbpass'];
+ 			echo '<br>dbHost = '.$_REQUEST['dbhost'];
+-			echo '<br>dbName = '.$_REQUEST['dbname'];
+-			echo '<p><a href="index.php?install=new3">Click here</a> to try again.';
++                        echo '<br>dbName = '.$_REQUEST['dbname'];
++                        printf('<p><a href="index.php?install=new3&dbuser=%s&dbpass=%s&dbhost=%s&dbname=%s">Click here</a> to try again.',
++                                $_REQUEST['dbuser'],
++                                $_REQUEST['dbpass'],
++                                $_REQUEST['dbhost'],
++                                $_REQUEST['dbname']
++                        );
+ 			die();
+ 		}
+ 		echo "Found!";
