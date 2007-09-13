@@ -1,12 +1,14 @@
 Summary:	MySQL Squid Access Report
 Summary(pl.UTF-8):	Program raportujący dostęp do Squida
 Name:		mysar
-Version:	2.1.0
+Version:	2.1.4
 Release:	0.1
 License:	GPL
 Group:		Applications/WWW
 Source0:	http://dl.sourceforge.net/mysar/%{name}-%{version}.tar.gz
-# Source0-md5:	c632dc1332508c7c031b3a11533d8b7e
+# Source0-md5:	4b570ace1b46ec3c13e0a048e9d6cf37
+Patch0:		%{name}-smarty_path.patch
+Patch1:		%{name}-cron.patch
 URL:		http://giannis.stoilis.gr/software/mysar/
 BuildRequires:	rpmbuild(macros) >= 1.268
 Requires:	webapps
@@ -29,34 +31,50 @@ user web traffic activity, as logged from a squid proxy.
 MySQL Squid Access Report, w skrócie mysar, to system raportujący
 aktywność użytkowników na WWW logowaną poprzez proxy squid.
 
+%package install
+Summary:	Installation scripts for mysar
+Summary(pl.UTF-8): Skrypty instalacyjne dla mysar
+Group:		Applications/WWW
+Requires:	%{name} = %{version}-%{release}
+AutoReq:	no
+AutoProv:	no
+
+%description install
+This package provides installation scripts for mysar. 
+
+%description install -l pl.UTF-8
+Pakiet ten dostarcza skryptów instalacyjnych dla mysar.
+
 %prep
 %setup -q -n %{name}
+%patch0 -p1
+%patch1 -p1
 
 cat > apache.conf <<'EOF'
-Alias /%{name} %{_appdir}
-<Directory %{_appdir}>
+Alias /%{name} %{_appdir}/www
+<Directory %{_appdir}/www>
 	Allow from all
 </Directory>
 EOF
 
 cat > lighttpd.conf <<'EOF'
-Alias.url += ( "/phpMyBackupPro" => "%{_datadir}/phpMyBackupPro/")
+Alias.url += ( "/mysar/" => "%{_datadir}/mysar/www/")
 EOF
 
 %install
 rm -rf $RPM_BUILD_ROOT
-install -d $RPM_BUILD_ROOT{%{_sysconfdir},%{_appdir},/etc/cron.d}
+install -d $RPM_BUILD_ROOT{%{_sysconfdir},%{_appdir}/etc,/etc/cron.d}
+install -d $RPM_BUILD_ROOT{%{_sharedstatedir}/%{_webapp}/smarty-tmp,/var/log/%{_webapp}}
 
 install apache.conf $RPM_BUILD_ROOT%{_sysconfdir}/apache.conf
 install apache.conf $RPM_BUILD_ROOT%{_sysconfdir}/httpd.conf
 install lighttpd.conf $RPM_BUILD_ROOT%{_sysconfdir}/lighttpd.conf
 
-cp -af * $RPM_BUILD_ROOT%{_appdir}
+cp -af bin inc www www-templates* $RPM_BUILD_ROOT%{_appdir}
 rm -f $RPM_BUILD_ROOT%{_appdir}/etc/config,ini.example $RPM_BUILD_ROOT%{_appdir}/etc/mysar.cron
+rm -rf $RPM_BUILD_ROOT%{_appdir}/bin/mysar-binary-importer
 
 install etc/mysar.cron $RPM_BUILD_ROOT/etc/cron.d
-install etc/config.ini.example $RPM_BUILD_ROOT%{_sysconfdir}
-ln -sf %{_sysconfdir}/config.ini.example $RPM_BUILD_ROOT%{_appdir}/etc/config,ini.example
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -81,17 +99,27 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
+%doc CHANGELOG INSTALL README TODO UPGRADE etc/config.ini.example
 %dir %attr(750,root,http) %{_sysconfdir}
+%attr(750,root,root) %config(noreplace) /etc/cron.d/*
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/apache.conf
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/httpd.conf
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/lighttpd.conf
 %dir %{_appdir}
-%{_appdir}/bin
+%dir %{_sharedstatedir}/%{_webapp}
+%attr(770,root,http) %{_sharedstatedir}/%{_webapp}/smarty-tmp
+%dir %{_appdir}/bin
+%attr(750,root,root) %{_appdir}/bin/*.php
+%dir %{_appdir}/etc
 %{_appdir}/inc
-%{_appdir}/log
-%{_appdir}/smarty-tmp
 %{_appdir}/www-templates
 %{_appdir}/www-templates.pt_BR
 %{_appdir}/www
+%exclude %{_appdir}/www/install
 %{_appdir}/www-templates.fr_FR
 %{_appdir}/www-templates.ru_RU
+/var/log/mysar
+
+%files install
+%defattr(644,root,root,755)
+%{_appdir}/www/install
