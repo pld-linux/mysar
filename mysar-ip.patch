@@ -1,0 +1,641 @@
+diff -burN mysar.old/www/index.php mysar.new/www/index.php
+--- mysar.old/www/index.php	2007-08-17 11:05:19.000000000 +0200
++++ mysar.new/www/index.php	2007-09-22 14:15:53.000000000 +0200
+@@ -425,6 +425,143 @@
+ 		$template='IPSitesSummary';
+ 		break;
+ 
++	case 'ipsummary':
++		if(isset($_REQUEST['action']) && $_REQUEST['action']=='hostDescriptionUpdate') {
++			$query='UPDATE ';
++			$query.='hostnames';
++			$query.=' SET ';
++			$query.="description='".$_REQUEST['thisValue']."'";
++			$query.=' WHERE ';
++			$query.="ip='".$_REQUEST['hostiplong']."'";
++			db_update($query);
++			$pageVars['host']=getHostFromIP($_REQUEST['hostiplong'],$pageVars['date']);
++		}
++
++		$query = "SELECT DISTINCT date FROM traffic WHERE ip='${_REQUEST['hostiplong']}' AND sitesID";
++		if ( isset($_REQUEST['sitesID']) )
++			$query .= "='${_REQUEST['sitesID']}'";
++		else if ( isset($_REQUEST['site']) )
++			$query .= " IN ( SELECT id FROM sites WHERE site='${_REQUEST['site']}' )";
++
++		$pageVars['dates'] = db_select_all($query);
++		$pageVars['s_date_from'] = 'x';
++		$pageVars['s_date_to'] = 'x';
++		if ( isset($_REQUEST['d_from']) )
++			$pageVars['s_date_from'] = $_REQUEST['d_from'];
++		if ( isset($_REQUEST['d_to']) )
++			$pageVars['s_date_to'] = $_REQUEST['d_to'];
++		$date_query = "";
++		if ( isset($_REQUEST['d_from']) && isset($_REQUEST['d_to']) && $_REQUEST['d_from'] != '-' && $_REQUEST['d_form'] != '-' && strtotime($_REQUEST['d_from']) <= strtotime($_REQUEST['d_to']) ) {
++			$date_query = sprintf("  BETWEEN '%s' AND '%s' ",
++				$_REQUEST['d_from'],
++				$_REQUEST['d_to']
++			);
++		}
++
++
++		//Users don't retain the same id from the users table across different dates, so it should be re-calulated
++		$query='SELECT '.
++			'authuser'.
++			' FROM '.
++			'users'.
++			' WHERE '.
++			'id=\''.$_REQUEST['usersID'].'\'';
++		$currentAuthuser=db_select_one_row($query);
++
++
++		$validSortedFields[]='bytes';
++		$validSortedFields[]='site';
++		$validSortedFields[]='cachePercent';
++		$validSortedFields[]='date';
++		$pageVars['url']=url_createSortParameters($_SERVER['QUERY_STRING'],$validSortedFields);
++		
++		// create the urls for the byte unit
++		$pageVars['url']['B']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','B');
++		$pageVars['url']['K']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','K');
++		$pageVars['url']['M']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','M');
++		$pageVars['url']['G']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','G');
++
++		// determing the sort method, or get the defaults
++		if(empty($_REQUEST['OrderBy'])) {
++			$pageVars['OrderBy']=getConfigValue('defaultIPSitesSummaryOrderBy');
++		} else {
++			$pageVars['OrderBy']=$_REQUEST['OrderBy'];
++		}
++		if(empty($_REQUEST['OrderMethod'])) {
++			$pageVars['OrderMethod']=getConfigValue('defaultIPSitesSummaryOrderMethod');
++		} else {
++			$pageVars['OrderMethod']=$_REQUEST['OrderMethod'];
++		}
++		
++		// get byte unit used
++		if(empty($_REQUEST['ByteUnit'])) {
++			$pageVars['ByteUnit']=getConfigValue('defaultIPSitesSummaryByteUnit');
++		} else {
++			$pageVars['ByteUnit']=$_REQUEST['ByteUnit'];
++		}
++
++		// Fall back to reasonable defaults in case the database is missing these values
++		if(empty($pageVars['OrderBy'])) {
++			$pageVars['OrderBy']=$validSortedFields[0];
++		}
++		
++		$pageVars[$pageVars['OrderBy'].'LabelStart']='<u>';
++		$pageVars[$pageVars['OrderBy'].'LabelEnd']='</u>';
++		$pageVars[$pageVars['OrderBy'].$pageVars['OrderMethod'].'ImageBorder']='1';
++		$pageVars[$pageVars['ByteUnit'].'LabelStart']='<u>';
++		$pageVars[$pageVars['ByteUnit'].'LabelEnd']='</u>';
++		
++		$query="SELECT ";
++		$query.='trafficSummaries.sitesID AS sitesID';
++		$query.=',';
++		$query.='sites.site AS site';
++		$query.=',';
++		$query.='SUM(trafficSummaries.inCache+trafficSummaries.outCache) AS bytes';
++		$query.=',';
++		$query.='TRUNCATE((SUM(trafficSummaries.inCache)/SUM(trafficSummaries.inCache+trafficSummaries.outCache))*100,0) AS cachePercent,';
++		$query.='trafficSummaries.date';
++		$query.=' FROM trafficSummaries';
++		$query.=' JOIN sites ON ';
++		$query.='trafficSummaries.sitesID=sites.id';
++		$query.=' WHERE ';
++		$query.="trafficSummaries.ip='".$pageVars['hostiplong']."'";
++		if ( $date_query != "" )
++			$query.= " AND trafficSummaries.date $date_query ";
++		$query.=" GROUP BY trafficSummaries.sitesID";
++		$query.=' ORDER BY '.$pageVars['OrderBy'].' '.$pageVars['OrderMethod'];
++		$pageVars['summaryIPSites']=db_select_all($query);
++		
++		$query='SELECT ';
++		$query.='INET_NTOA(traffic.ip) AS hostip';
++		$query.=',';
++		$query.='traffic.ip AS hostiplong';
++		$query.=',';
++		$query.='traffic.usersID AS usersID';
++		$query.=',';
++		$query.='traffic.authuser AS username';
++		$query.=',';
++		$query.='traffic.time AS time';
++		$query.=',';
++		$query.='traffic.bytes AS bytes';
++		$query.=',';
++		$query.='traffic.url AS url';
++		$query.=',';
++		$query.='traffic.resultCode AS resultCode';
++		$query.=' FROM traffic';
++		$query.=' WHERE ';
++		if (isset($pageVars['usersID'])) {
++			$query.="traffic.usersID='".$pageVars['usersID']."' AND";
++		}
++		$query.="traffic.ip='".$pageVars['hostiplong']."'";
++		if ( $date_query != "" )
++			$query.= " AND date $date_query";
++		$query.=' ORDER BY traffic.time DESC ';
++		$query.=' LIMIT 10';
++		$pageVars['latestUserActivity']=db_select_all($query);
++		
++		$template='ipsummary';
++		break;
++
+ 	case 'details':
+ 		$validSortedFields[]='time';
+ 		$validSortedFields[]='bytes';
+@@ -487,6 +624,83 @@
+ 		$template='details';
+ 		break;
+ 	
++	case 'ipdetails':
++		$validSortedFields[]='time';
++		$validSortedFields[]='bytes';
++		$validSortedFields[]='url';
++		$validSortedFields[]='status';
++		$pageVars['url']=url_createSortParameters($_SERVER['QUERY_STRING'],$validSortedFields);
++		$pageVars['site']=$_REQUEST['site'];
++
++		$query = "SELECT DISTINCT date FROM traffic WHERE ip='${_REQUEST['hostiplong']}' AND sitesID IN ( SELECT id FROM sites WHERE site='${_REQUEST['site']}' )";
++
++		$pageVars['dates'] = db_select_all($query);
++		$pageVars['s_date_from'] = 'x';
++		$pageVars['s_date_to'] = 'x';
++		if ( isset($_REQUEST['d_from']) )
++			$pageVars['s_date_from'] = $_REQUEST['d_from'];
++		if ( isset($_REQUEST['d_to']) )
++			$pageVars['s_date_to'] = $_REQUEST['d_to'];
++		$date_query = "";
++		if ( isset($_REQUEST['d_from']) && isset($_REQUEST['d_to']) && $_REQUEST['d_from'] != '-' && $_REQUEST['d_form'] != '-' && strtotime($_REQUEST['d_from']) <= strtotime($_REQUEST['d_to']) ) {
++			$date_query = sprintf("  BETWEEN '%s' AND '%s' ",
++				$_REQUEST['d_from'],
++				$_REQUEST['d_to']
++			);
++		}
++
++		// create the urls for the byte unit
++		$pageVars['url']['B']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','B');
++		$pageVars['url']['K']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','K');
++		$pageVars['url']['M']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','M');
++		$pageVars['url']['G']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','G');
++		
++		// determing the sort method, or get the defaults
++		if(empty($_REQUEST['OrderBy'])) {
++			$pageVars['OrderBy']=getConfigValue('defaultDateTimeOrderBy');
++		} else {
++			$pageVars['OrderBy']=$_REQUEST['OrderBy'];
++		}
++		if(empty($_REQUEST['OrderMethod'])) {
++			$pageVars['OrderMethod']=getConfigValue('defaultDateTimeOrderMethod');
++		} else {
++			$pageVars['OrderMethod']=$_REQUEST['OrderMethod'];
++		}
++		// get byte unit used
++		if(empty($_REQUEST['ByteUnit'])) {
++			$pageVars['ByteUnit']=getConfigValue('defaultDateTimeByteUnit');
++		} else {
++			$pageVars['ByteUnit']=$_REQUEST['ByteUnit'];
++		}
++		
++		// Fall back to reasonable defaults in case the database is missing these values
++		if(empty($pageVars['OrderBy'])) {
++			$pageVars['OrderBy']='date';
++		}
++
++		$pageVars[$pageVars['OrderBy'].'LabelStart']='<u>';
++		$pageVars[$pageVars['OrderBy'].'LabelEnd']='</u>';
++		$pageVars[$pageVars['OrderBy'].$pageVars['OrderMethod'].'ImageBorder']='1';
++		$pageVars[$pageVars['ByteUnit'].'LabelStart']='<u>';
++		$pageVars[$pageVars['ByteUnit'].'LabelEnd']='</u>';
++
++		if($pageVars['OrderBy']=='status') {
++			$pageVars['OrderBy']='resultCode';
++		}
++		$query="SELECT ";
++		$query.="time,bytes,url,resultCode,date";
++		$query.=" FROM traffic";
++		$query.=" WHERE ";
++		$query.=" date $date_query AND ";
++		$query .= "sitesID IN ( SELECT id FROM sites WHERE site='${_REQUEST['site']}' ) ";
++		$query.=" AND ";
++		$query.="ip='".$pageVars['hostiplong']."'";
++		$query.=' ORDER BY date DESC';
++		$pageVars['siteDetails']=db_select_all($query);
++
++		$template='ipdetails';
++		break;
++		
+ 	case 'allsites':
+ 		$validSortedFields[]='bytes';
+ 		$validSortedFields[]='site';
+@@ -706,6 +920,85 @@
+ 
+ 		break;
+ 		
++	case 'indexip':
++
++		// create the urls for the users,date, bytes and cachePercent
++		$validSortedFields[]='hostip';
++		$validSortedFields[]='username';
++		$validSortedFields[]='sites';
++		$validSortedFields[]='bytes';
++		$validSortedFields[]='cachePercent';
++		$pageVars['url']=url_createSortParameters($_SERVER['QUERY_STRING'],$validSortedFields);
++		
++		// create the urls for the byte unit
++		$pageVars['url']['B']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','B');
++		$pageVars['url']['K']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','K');
++		$pageVars['url']['M']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','M');
++		$pageVars['url']['G']=url_addParameter($_SERVER['QUERY_STRING'],'ByteUnit','G');
++
++		// determing the sort method, or get the defaults
++		if(empty($_REQUEST['OrderBy'])) {
++			$pageVars['OrderBy']=getConfigValue('defaultIPSummaryOrderBy');
++		} else {
++			$pageVars['OrderBy']=$_REQUEST['OrderBy'];
++		}
++		if(empty($_REQUEST['OrderMethod'])) {
++			$pageVars['OrderMethod']=getConfigValue('defaultIPSummaryOrderMethod');
++		} else {
++			$pageVars['OrderMethod']=$_REQUEST['OrderMethod'];
++		}
++		
++		// get byte unit used
++		if(empty($_REQUEST['ByteUnit'])) {
++			$pageVars['ByteUnit']=getConfigValue('defaultIPSummaryByteUnit');
++		} else {
++			$pageVars['ByteUnit']=$_REQUEST['ByteUnit'];
++		}
++
++		// Fall back to reasonable defaults in case the database is missing these values
++		if(empty($pageVars['OrderBy']) || !in_array($pageVars['OrderBy'], $validSortedFields) ) {
++			$pageVars['OrderBy']=$validSortedFields[0];
++		}
++		
++		$pageVars[$pageVars['OrderBy'].'LabelStart']='<u>';
++		$pageVars[$pageVars['OrderBy'].'LabelEnd']='</u>';
++		$pageVars[$pageVars['OrderBy'].$pageVars['OrderMethod'].'ImageBorder']='1';
++		$pageVars[$pageVars['ByteUnit'].'LabelStart']='<u>';
++		$pageVars[$pageVars['ByteUnit'].'LabelEnd']='</u>';
++		
++		$query='SELECT ';
++		$query.='INET_NTOA(trafficSummaries.ip) AS hostip';
++		$query.=',';
++		$query.='trafficSummaries.ip AS hostiplong';
++		$query.=',';
++		$query.='hostnames.hostname AS hostname';
++		$query.=',';
++		$query.='hostnames.description AS hostdescription';
++		$query.=',';
++		$query.='users.id AS usersID';
++		$query.=',';
++		$query.='users.authuser AS username';
++		$query.=',';
++		$query.='SUM(trafficSummaries.inCache+trafficSummaries.outCache) as bytes';
++		$query.=',';
++		$query.='TRUNCATE((SUM(trafficSummaries.inCache)/SUM(trafficSummaries.inCache+trafficSummaries.outCache))*100,0) AS cachePercent';
++		$query.=',';
++		$query.='COUNT(DISTINCTROW(trafficSummaries.sitesID)) AS sites';
++		$query.=' FROM trafficSummaries';
++		$query.=' LEFT JOIN hostnames';
++		$query.=' ON ';
++		$query.='trafficSummaries.ip=hostnames.ip';
++		$query.=' LEFT JOIN users';
++		$query.=' ON ';
++		$query.='trafficSummaries.usersID=users.id';
++		$query.=' AND ';
++		$query.='trafficSummaries.date=users.date';
++		$query.=' GROUP BY trafficSummaries.ip';
++		$query.=' ORDER BY '.$pageVars['OrderBy'].' '.$pageVars['OrderMethod'];
++		$pageVars['summaryIPRecords']=db_select_all($query);
++		
++		$template='indexip';
++		break;
+ 	
+ 	default:
+ 		// create the urls for the users,date, bytes and cachePercent
+@@ -743,8 +1036,8 @@
+ 		}
+ 		
+ 		// Fall back to reasonable defaults in case the database is missing these values
+-		if(empty($pageVars['OrderBy'])) {
+-			$pageVars['OrderBy']=$validSortedFields['0'];
++		if(empty($pageVars['OrderBy']) || !in_array($pageVars['OrderBy'], $validSortedFields) ) {
++			$pageVars['OrderBy']=$validSortedFields[0];
+ 		}
+ 
+ 		$pageVars[$pageVars['OrderBy'].'LabelStart']='<u>';
+diff -burN mysar.old/www-templates/indexip.tpl mysar.new/www-templates/indexip.tpl
+--- mysar.old/www-templates/indexip.tpl	1970-01-01 01:00:00.000000000 +0100
++++ mysar.new/www-templates/indexip.tpl	2007-09-22 12:59:52.000000000 +0200
+@@ -0,0 +1,86 @@
++<nobr>[
++<a href="{$pageVars.uri}">Refresh this page</a>
++]</nobr>
++
++      <table><tr><th style="font-size: 20px";>IP Summary</th></tr></table>
++      <p>
++      [
++        <a href="{$smarty.server.PHP_SELF}?a={$pageVars.thisPage}&action=setDefaultView&OrderMethod={$pageVars.OrderMethod}&OrderBy={$pageVars.OrderBy}&ByteUnit={$pageVars.ByteUnit}">
++          Set this view as the default
++        </a>
++      ]
++      [
++        <a href="{$smarty.server.PHP_SELF}?a=index&OrderMethod={$pageVars.OrderMethod}&OrderBy={$pageVars.OrderBy}&ByteUnit={$pageVars.ByteUnit}">
++          Switch to date summary
++        </a>
++      ]
++
++
++<center>
++  <table>
++    <tr>
++      <th>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.hostipASC}"><img border="{$pageVars.hostipASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.hostipLabelStart}HOST{$pageVars.hostipLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.hostipDESC}"><img border="{$pageVars.hostipDESCImageBorder}" src="images/down-arrow.gif"></a>
++      </th>
++      <th>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.usernameASC}"><img border="{$pageVars.usernameASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.usernameLabelStart}USERNAME{$pageVars.usernameLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.usernameDESC}"><img border="{$pageVars.usernameDESCImageBorder}" src="images/down-arrow.gif"></a>
++      </th>
++      <th>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.sitesASC}"><img border="{$pageVars.sitesASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.sitesLabelStart}SITES{$pageVars.sitesLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.sitesDESC}"><img border="{$pageVars.sitesDESCImageBorder}" src="images/down-arrow.gif"></a>
++      </th>
++      <th>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.bytesASC}"><img border="{$pageVars.bytesASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.bytesLabelStart}BYTES{$pageVars.bytesLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.bytesDESC}"><img border="{$pageVars.bytesDESCImageBorder}" src="images/down-arrow.gif"></a>
++        <br>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.B}">{$pageVars.BLabelStart}B{$pageVars.BLabelEnd}</a>
++        |
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.K}">{$pageVars.KLabelStart}K{$pageVars.KLabelEnd}</a>
++        |
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.M}">{$pageVars.MLabelStart}M{$pageVars.MLabelEnd}</a>
++        |
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.G}">{$pageVars.GLabelStart}G{$pageVars.GLabelEnd}</a>
++      </th>
++      <th>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.cachePercentASC}"><img border="{$pageVars.cachePercentASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.cachePercentLabelStart}CACHE PERCENT{$pageVars.cachePercentLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.cachePercentDESC}"><img border="{$pageVars.cachePercentDESCImageBorder}" src="images/down-arrow.gif"></a>
++      </th>
++    </tr>
++    {assign var=bytesTotal value="0"}
++    {foreach from=$pageVars.summaryIPRecords item=record}
++      {if $record.hostdescription!=""}
++        {assign var="thisRecord" value=$record.hostdescription"}
++      {elseif $record.hostip!=$record.hostname}
++        {assign var="thisRecord" value=$record.hostname}
++      {else}
++        {assign var="thisRecord" value=$record.hostip}
++      {/if}
++
++    <tr onMouseOver="this.bgColor='#C5D3E7';" onMouseOut="this.bgColor='#DAE3F0';">
++      <td><a href='{$smarty.server.PHP_SELF}?a=IPSitesSummary2&hostiplong={$record.hostiplong}'>{$thisRecord}</a></td>
++      <td><a href='{$smarty.server.PHP_SELF}?a=IPSitesSummary2&hostiplong={$record.hostiplong}'>{$record.username}</a></td>
++      <td><a href='{$smarty.server.PHP_SELF}?a=IPSitesSummary2&hostiplong={$record.hostiplong}'>{$record.sites}</a></td>
++      <td>{$record.bytes|bytesToHRF:$pageVars.ByteUnit}</td>
++      <td>{$record.cachePercent}%</td>
++    </tr>
++    {assign var=bytesTotal value=$bytesTotal+$record.bytes}
++    {/foreach}
++    <tr><td></td></tr>
++    <tr><td></td></tr>
++    <tr>
++      <th>TOTALS</th>
++      <th></th>
++      <th></th>
++      <th style="text-align: right;">{$bytesTotal|bytesToHRF:$pageVars.ByteUnit}</th>
++      <th></th>
++    </tr>
++  </table>
++  <p>
++</center>
+diff -burN mysar.old/www-templates/index.tpl mysar.new/www-templates/index.tpl
+--- mysar.old/www-templates/index.tpl	2007-08-17 11:05:19.000000000 +0200
++++ mysar.new/www-templates/index.tpl	2007-09-22 12:59:06.000000000 +0200
+@@ -9,6 +9,12 @@
+           Set this view as the default
+         </a>
+       ]
++      [
++        <a href="{$smarty.server.PHP_SELF}?a=indexip&OrderMethod={$pageVars.OrderMethod}&OrderBy={$pageVars.OrderBy}&ByteUnit={$pageVars.ByteUnit}">
++          Switch to IP summary
++        </a>
++      ]
++
+       <br>
+       <table cellpadding=1 cellspacing=1>
+         <tr>
+diff -burN mysar.old/www-templates/ipdetails.tpl mysar.new/www-templates/ipdetails.tpl
+--- mysar.old/www-templates/ipdetails.tpl	1970-01-01 01:00:00.000000000 +0100
++++ mysar.new/www-templates/ipdetails.tpl	2007-09-22 15:42:13.000000000 +0200
+@@ -0,0 +1,83 @@
++<nobr>[
++<a href="{$smarty.server.PHP_SELF}?a=IPSitesSummary&date={$pageVars.date}&hostiplong={$pageVars.hostiplong}&usersID={$pageVars.usersID}">&lt;&lt;&lt; Back to "Sites Summary for a Specific IP"</a>
++|
++<a href="{$pageVars.uri}">Refresh this page</a>
++]</nobr>
++
++<table><tr><th style="font-size: 20px";>Details for a Specific Host, and Site</th></tr></table>
++<p>
++<table><tr><td style="font-size: 20px;">{$pageVars.host.ip}</td></tr></table>
++<p>
++<table>
++  <tr><td>Host Name</td><td style="text-align:left;">{$pageVars.host.hostname}</td></tr>
++  <tr><td>Host IP</td><td style="text-align:left;">{$pageVars.host.ip}</td></tr>
++  <tr><td>Host Description</td><td style="text-align:left;">{$pageVars.host.description}</td></tr>
++  <tr><td>User Name</td><td style="text-align:left;">{$pageVars.user.authuser}</tr>
++  <tr><td>Site</td><td style="text-align:left;"><a href="{$pageVars.site}" target="_blank">{$pageVars.site}</a></tr>
++</table>
++<p>
++      [
++        <a href="{$smarty.server.PHP_SELF}?a={$pageVars.thisPage}&action=setDefaultView&OrderMethod={$pageVars.orderMethod}&OrderBy={$pageVars.orderBy}&ByteUnit={$pageVars.ByteUnit}&date={$pageVars.date}&ipID={$pageVars.ipID}&siteID={$pageVars.siteID}">
++          Set this view as the default
++        </a>
++      ]
++  <table>
++    <tr>
++      <td>
++      <form method="post" style="margin-bottom: 0px;">
++
++      From: <select name="d_from"> <option value="-"> --- </option>
++        {foreach from=$pageVars.dates item=record}
++          <option value="{$record.date}" {if $pageVars.s_date_from eq $record.date} selected{/if}>{$record.date}</option>
++        {/foreach}
++      </select>
++      To: <select name="d_to"> <option value="-"> --- </option>
++        {foreach from=$pageVars.dates item=record}
++          <option value="{$record.date}" {if $pageVars.s_date_to eq $record.date} selected{/if}>{$record.date}</option>
++        {/foreach}
++      <input type="submit" value="filter">
++      </form>
++      </td>
++  </table>
++  <table>
++    <tr>
++      <th>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.timeASC}"><img border="{$pageVars.timeASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.timeLabelStart}TIME{$pageVars.timeLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.timeDESC}"><img border="{$pageVars.timeDESCImageBorder}" src="images/down-arrow.gif"></a>
++      </th>
++      <th width="110">
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.bytesASC}"><img border="{$pageVars.bytesASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.bytesLabelStart}BYTES{$pageVars.bytesLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.bytesDESC}"><img border="{$pageVars.bytesDESCImageBorder}" src="images/down-arrow.gif"></a>
++        <br>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.B}">{$pageVars.BLabelStart}B{$pageVars.BLabelEnd}</a>
++        |
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.K}">{$pageVars.KLabelStart}K{$pageVars.KLabelEnd}</a>
++        |
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.M}">{$pageVars.MLabelStart}M{$pageVars.MLabelEnd}</a>
++        |
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.G}">{$pageVars.GLabelStart}G{$pageVars.GLabelEnd}</a>
++      </th>
++      <th>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.urlASC}"><img border="{$pageVars.urlASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.urlLabelStart}URL{$pageVars.urlLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.urlDESC}"><img border="{$pageVars.urlDESCImageBorder}" src="images/down-arrow.gif"></a>
++      </th>
++      <th>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.statusASC}"><img border="{$pageVars.statusASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.statusLabelStart}STATUS{$pageVars.statusLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.statusDESC}"><img border="{$pageVars.statusDESCImageBorder}" src="images/down-arrow.gif"></a>
++      </th>
++      <th>Date</th>
++    </tr>
++  {foreach from=$pageVars.siteDetails item=record}
++  <tr onMouseOver="this.bgColor='#C5D3E7';" onMouseOut="this.bgColor='#DAE3F0';">
++    <td>{$record.time}</td>
++    <td>{$record.bytes|bytesToHRF:$pageVars.ByteUnit}</td>
++    <td style="text-align: left;"><a href="{$record.url}">{$record.url|string_trim:80:"..."}</a></td>
++    <td style="text-align: left;">{$record.resultCode}</td>
++    <td style="text-align: left;">{$record.date}</td>
++  </tr>
++  {/foreach}
++  </table>
+diff -burN mysar.old/www-templates/ipsummary.tpl mysar.new/www-templates/ipsummary.tpl
+--- mysar.old/www-templates/ipsummary.tpl	1970-01-01 01:00:00.000000000 +0100
++++ mysar.new/www-templates/ipsummary.tpl	2007-09-22 15:20:34.000000000 +0200
+@@ -0,0 +1,116 @@
++<nobr>[
++<a href="{$smarty.server.PHP_SELF}?a=indexip">&lt;&lt;&lt; Back to IP Summary</a>
++|
++<a href="{$pageVars.uri}">Refresh this page</a>
++]</nobr>
++<p>
++
++<p>
++<table>
++  <tr><th colspan="2">Information box</th></tr>
++  <form method="POST">
++  <input type="hidden" name="hiddenSubmit" value="1">
++  <input type="hidden" name="action" value="hostDescriptionUpdate">
++  <tr><td>Host Name</td><td style="text-align:left;">{$pageVars.host.hostname}</td></tr>
++  <tr><td>Host IP</td><td style="text-align:left;">{$pageVars.host.ip}</td></tr>
++  <tr><td>Host Description</td><td style="text-align:left;"><input type="text" name="thisValue" value="{$pageVars.host.description}"</td></tr>
++  <tr><td>User Name</td><td style="text-align:left;">{$pageVars.user.authuser}</tr>
++  </form>
++</table>
++<p>
++		
++  <table>
++    <tr><th colspan="2">Filter by date</th></tr>
++    <tr>
++      <td>
++      <form method="post" style="margin-bottom: 0px;">
++      From: <select name="d_from"> <option value="-"> --- </option>
++        {foreach from=$pageVars.dates item=record}
++          <option value="{$record.date}" {if $pageVars.s_date_from eq $record.date} selected{/if}>{$record.date}</option>
++        {/foreach}
++      </select>
++      To: <select name="d_to"> <option value="-"> --- </option>
++        {foreach from=$pageVars.dates item=record}
++          <option value="{$record.date}" {if $pageVars.s_date_to eq $record.date} selected{/if}>{$record.date}</option>
++        {/foreach}
++      <input type="submit" value="filter">
++      </form>
++      </td>
++  </table><br/>
++      [
++        <a href="{$smarty.server.PHP_SELF}?a={$pageVars.thisPage}&action=setDefaultView&OrderMethod={$pageVars.orderMethod}&OrderBy={$pageVars.orderBy}&ByteUnit={$pageVars.ByteUnit}&date={$pageVars.date}&hostiplong={$pageVars.hostiplong}">
++          Set this view as the default
++        </a>
++      ]
++  <table>
++    <tr>
++      <th></th>
++      <th>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.siteASC}"><img border="{$pageVars.siteASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.siteLabelStart}SITE{$pageVars.siteLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.siteDESC}"><img border="{$pageVars.siteDESCImageBorder}" src="images/down-arrow.gif"></a>
++      </th>
++      <th width="110">
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.bytesASC}"><img border="{$pageVars.bytesASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.bytesLabelStart}BYTES{$pageVars.bytesLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.bytesDESC}"><img border="{$pageVars.bytesDESCImageBorder}" src="images/down-arrow.gif"></a>
++        <br>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.B}">{$pageVars.BLabelStart}B{$pageVars.BLabelEnd}</a>
++        |
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.K}">{$pageVars.KLabelStart}K{$pageVars.KLabelEnd}</a>
++        |
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.M}">{$pageVars.MLabelStart}M{$pageVars.MLabelEnd}</a>
++        |
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.G}">{$pageVars.GLabelStart}G{$pageVars.GLabelEnd}</a>
++      </th>
++      <th>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.cachePercentASC}"><img border="{$pageVars.cachePercentASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.cachePercentLabelStart}CACHE PERCENT{$pageVars.cachePercentLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.cachePercentDESC}"><img border="{$pageVars.cachePercentDESCImageBorder}" src="images/down-arrow.gif"></a>
++      </th>
++      <th>
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.dateASC}"><img border="{$pageVars.dateASCImageBorder}" src="images/up-arrow.gif"></a>
++          {$pageVars.dateLabelStart}Date{$pageVars.dateLabelEnd}
++        <a href="{$smarty.server.PHP_SELF}?{$pageVars.url.dateDESC}"><img border="{$pageVars.dateDESCImageBorder}" src="images/down-arrow.gif"></a>
++      </th>
++    </tr>
++  {assign var=recordCount value="0"}
++  {assign var=bytesTotal value="0"}
++  {foreach from=$pageVars.summaryIPSites item=record}
++  <tr onMouseOver="this.bgColor='#C5D3E7';" onMouseOut="this.bgColor='#DAE3F0';">
++    <td style="text-align: center;"><a href="{$smarty.server.PHP_SELF}?a=ipdetails&date={$pageVars.date}&hostiplong={$pageVars.hostiplong}&site={$record.site}&d_from={$pageVars.s_date_from}&d_to={$pageVars.s_date_to}"><b>Details</b></td>
++    <td style="text-align: left;"><a href="{$record.site}" target="_blank">{$record.site}</a></td>
++    <td>{$record.bytes|bytesToHRF:$pageVars.ByteUnit}</td>
++    <td>{$record.cachePercent}%</td>
++    <td>{$record.date}</td>
++  </tr>
++  {assign var=recordCount value=$recordCount+1}
++  {assign var=bytesTotal value=$bytesTotal+$record.bytes}
++  {/foreach}
++    <tr>
++      <th>TOTALS</th>
++      <th style="text-align: center;">Record count: {$recordCount}</th>
++      <th style="text-align: right;">{$bytesTotal|bytesToHRF:$pageVars.ByteUnit}</th>
++      <th></th>
++      <th></th>
++    </tr>
++  </table>
++  <p>
++    <table>
++    <tr><th colspan="7">Latest user activity</th></td>
++    <tr>
++      <th>TIME</th>
++      <th>BYTES</th>
++      <th>URL</th>
++      <th>STATUS</th>
++    </tr>
++    {foreach from=$pageVars.latestUserActivity item=record}
++    <tr onMouseOver="this.bgColor='#C5D3E7';" onMouseOut="this.bgColor='#DAE3F0';">
++      <td>{$record.time}</td>
++      <td>{$record.bytes}</td>
++      <td style="text-align: left"><a href="{$record.url}">{$record.url|string_trim:80:"..."}</a></td>
++      <td style="text-align: left">{$record.resultCode}</td>
++    </tr>
++    {/foreach}
++  </table>
++
