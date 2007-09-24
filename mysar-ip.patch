@@ -396,9 +396,9 @@ diff -burN mysar.old/www-templates/indexip.tpl mysar.new/www-templates/indexip.t
 +      {/if}
 +
 +    <tr onMouseOver="this.bgColor='#C5D3E7';" onMouseOut="this.bgColor='#DAE3F0';">
-+      <td><a href='{$smarty.server.PHP_SELF}?a=IPSitesSummary2&hostiplong={$record.hostiplong}'>{$thisRecord}</a></td>
-+      <td><a href='{$smarty.server.PHP_SELF}?a=IPSitesSummary2&hostiplong={$record.hostiplong}'>{$record.username}</a></td>
-+      <td><a href='{$smarty.server.PHP_SELF}?a=IPSitesSummary2&hostiplong={$record.hostiplong}'>{$record.sites}</a></td>
++      <td><a href='{$smarty.server.PHP_SELF}?a=ipdetails&hostiplong={$record.hostiplong}'>{$thisRecord}</a></td>
++      <td><a href='{$smarty.server.PHP_SELF}?a=ipdetails&hostiplong={$record.hostiplong}'>{$record.username}</a></td>
++      <td><a href='{$smarty.server.PHP_SELF}?a=ipdetails&hostiplong={$record.hostiplong}'>{$record.sites}</a></td>
 +      <td>{$record.bytes|bytesToHRF:$pageVars.ByteUnit}</td>
 +      <td>{$record.cachePercent}%</td>
 +    </tr>
@@ -437,7 +437,7 @@ diff -burN mysar.old/www-templates/ipdetails.tpl mysar.new/www-templates/ipdetai
 +++ mysar.new/www-templates/ipdetails.tpl	2007-09-22 15:42:13.000000000 +0200
 @@ -0,0 +1,83 @@
 +<nobr>[
-+<a href="{$smarty.server.PHP_SELF}?a=IPSitesSummary&date={$pageVars.date}&hostiplong={$pageVars.hostiplong}&usersID={$pageVars.usersID}">&lt;&lt;&lt; Back to "Sites Summary for a Specific IP"</a>
++<a href="{$smarty.server.PHP_SELF}?a=ipsummary&date={$pageVars.date}&hostiplong={$pageVars.hostiplong}&usersID={$pageVars.usersID}">&lt;&lt;&lt; Back to "Sites Summary for a Specific IP"</a>
 +|
 +<a href="{$pageVars.uri}">Refresh this page</a>
 +]</nobr>
