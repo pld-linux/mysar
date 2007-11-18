@@ -13,6 +13,7 @@ Patch2:		%{name}-install.patch
 Patch3:		%{name}-ip.patch
 URL:		http://giannis.stoilis.gr/software/mysar/
 BuildRequires:	rpmbuild(macros) >= 1.268
+Requires:	php(mysql)
 Requires:	webapps
 Requires:	webserver(alias)
 Requires:	webserver(indexfile)
@@ -62,7 +63,7 @@ Alias /%{name} %{_appdir}/www
 EOF
 
 cat > lighttpd.conf <<'EOF'
-Alias.url += ( "/mysar/" => "%{_datadir}/mysar/www/")
+alias.url += ( "/mysar/" => "%{_datadir}/mysar/www/" )
 EOF
 
 %install
