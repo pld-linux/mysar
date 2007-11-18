@@ -1,7 +1,7 @@
 diff -burN mysar.old/www/index.php mysar.new/www/index.php
 --- mysar.old/www/index.php	2007-08-17 11:05:19.000000000 +0200
 +++ mysar.new/www/index.php	2007-09-22 14:15:53.000000000 +0200
-@@ -425,6 +425,143 @@
+@@ -425,6 +425,139 @@
  		$template='IPSitesSummary';
  		break;
  
@@ -17,11 +17,7 @@ diff -burN mysar.old/www/index.php mysar.new/www/index.php
 +			$pageVars['host']=getHostFromIP($_REQUEST['hostiplong'],$pageVars['date']);
 +		}
 +
-+		$query = "SELECT DISTINCT date FROM traffic WHERE ip='${_REQUEST['hostiplong']}' AND sitesID";
-+		if ( isset($_REQUEST['sitesID']) )
-+			$query .= "='${_REQUEST['sitesID']}'";
-+		else if ( isset($_REQUEST['site']) )
-+			$query .= " IN ( SELECT id FROM sites WHERE site='${_REQUEST['site']}' )";
++		$query = "SELECT DISTINCT date FROM traffic WHERE ip='${_REQUEST['hostiplong']}'";
 +
 +		$pageVars['dates'] = db_select_all($query);
 +		$pageVars['s_date_from'] = 'x';
@@ -145,7 +141,7 @@ diff -burN mysar.old/www/index.php mysar.new/www/index.php
  	case 'details':
  		$validSortedFields[]='time';
  		$validSortedFields[]='bytes';
-@@ -487,6 +624,83 @@
+@@ -487,6 +624,82 @@
  		$template='details';
  		break;
  	
@@ -157,7 +153,7 @@ diff -burN mysar.old/www/index.php mysar.new/www/index.php
 +		$pageVars['url']=url_createSortParameters($_SERVER['QUERY_STRING'],$validSortedFields);
 +		$pageVars['site']=$_REQUEST['site'];
 +
-+		$query = "SELECT DISTINCT date FROM traffic WHERE ip='${_REQUEST['hostiplong']}' AND sitesID IN ( SELECT id FROM sites WHERE site='${_REQUEST['site']}' )";
++		$query = "SELECT DISTINCT date FROM traffic WHERE ip='${_REQUEST['hostiplong']}'";
 +
 +		$pageVars['dates'] = db_select_all($query);
 +		$pageVars['s_date_from'] = 'x';
@@ -168,7 +164,7 @@ diff -burN mysar.old/www/index.php mysar.new/www/index.php
 +			$pageVars['s_date_to'] = $_REQUEST['d_to'];
 +		$date_query = "";
 +		if ( isset($_REQUEST['d_from']) && isset($_REQUEST['d_to']) && $_REQUEST['d_from'] != '-' && $_REQUEST['d_form'] != '-' && strtotime($_REQUEST['d_from']) <= strtotime($_REQUEST['d_to']) ) {
-+			$date_query = sprintf("  BETWEEN '%s' AND '%s' ",
++			$date_query = sprintf(" date BETWEEN '%s' AND '%s' ",
 +				$_REQUEST['d_from'],
 +				$_REQUEST['d_to']
 +			);
@@ -216,9 +212,8 @@ diff -burN mysar.old/www/index.php mysar.new/www/index.php
 +		$query.="time,bytes,url,resultCode,date";
 +		$query.=" FROM traffic";
 +		$query.=" WHERE ";
-+		$query.=" date $date_query AND ";
-+		$query .= "sitesID IN ( SELECT id FROM sites WHERE site='${_REQUEST['site']}' ) ";
-+		$query.=" AND ";
++		if ( strlen($date_query) )
++			$query.=" date $date_query AND ";
 +		$query.="ip='".$pageVars['hostiplong']."'";
 +		$query.=' ORDER BY date DESC';
 +		$pageVars['siteDetails']=db_select_all($query);
@@ -396,9 +391,9 @@ diff -burN mysar.old/www-templates/indexip.tpl mysar.new/www-templates/indexip.t
 +      {/if}
 +
 +    <tr onMouseOver="this.bgColor='#C5D3E7';" onMouseOut="this.bgColor='#DAE3F0';">
-+      <td><a href='{$smarty.server.PHP_SELF}?a=ipdetails&hostiplong={$record.hostiplong}'>{$thisRecord}</a></td>
-+      <td><a href='{$smarty.server.PHP_SELF}?a=ipdetails&hostiplong={$record.hostiplong}'>{$record.username}</a></td>
-+      <td><a href='{$smarty.server.PHP_SELF}?a=ipdetails&hostiplong={$record.hostiplong}'>{$record.sites}</a></td>
++      <td><a href='{$smarty.server.PHP_SELF}?a=ipsummary&hostiplong={$record.hostiplong}'>{$thisRecord}</a></td>
++      <td><a href='{$smarty.server.PHP_SELF}?a=ipsummary&hostiplong={$record.hostiplong}'>{$record.username}</a></td>
++      <td><a href='{$smarty.server.PHP_SELF}?a=ipsummary&hostiplong={$record.hostiplong}'>{$record.sites}</a></td>
 +      <td>{$record.bytes|bytesToHRF:$pageVars.ByteUnit}</td>
 +      <td>{$record.cachePercent}%</td>
 +    </tr>
