@@ -14,6 +14,7 @@ Patch3:		%{name}-ip.patch
 URL:		http://giannis.stoilis.gr/software/mysar/
 BuildRequires:	rpmbuild(macros) >= 1.268
 Requires:	php(mysql)
+Requires:	php(pcre)
 Requires:	webapps
 Requires:	webserver(alias)
 Requires:	webserver(indexfile)
