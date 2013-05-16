@@ -2,7 +2,7 @@ Summary:	MySQL Squid Access Report
 Summary(pl.UTF-8):	Program raportujący dostęp do Squida
 Name:		mysar
 Version:	2.1.4
-Release:	1
+Release:	2
 License:	GPL
 Group:		Applications/WWW
 Source0:	http://dl.sourceforge.net/mysar/%{name}-%{version}.tar.gz
@@ -19,6 +19,7 @@ Requires:	webapps
 Requires:	webserver(alias)
 Requires:	webserver(indexfile)
 Requires:	webserver(php)
+Conflicts:	apache-base < 2.4.0-1
 BuildArch:	noarch
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
@@ -63,6 +64,13 @@ Alias /%{name} %{_appdir}/www
 </Directory>
 EOF
 
+cat > httpd.conf <<'EOF'
+Alias /%{name} %{_appdir}/www
+<Directory %{_appdir}/www>
+	Require all granted
+</Directory>
+EOF
+
 cat > lighttpd.conf <<'EOF'
 alias.url += ( "/mysar/" => "%{_datadir}/mysar/www/" )
 EOF
@@ -73,7 +81,7 @@ install -d $RPM_BUILD_ROOT{%{_sysconfdir},%{_appdir}/etc,/etc/cron.d}
 install -d $RPM_BUILD_ROOT{%{_sharedstatedir}/%{_webapp}/smarty-tmp,/var/log/%{_webapp}}
 
 install apache.conf $RPM_BUILD_ROOT%{_sysconfdir}/apache.conf
-install apache.conf $RPM_BUILD_ROOT%{_sysconfdir}/httpd.conf
+install httpd.conf $RPM_BUILD_ROOT%{_sysconfdir}/httpd.conf
 install lighttpd.conf $RPM_BUILD_ROOT%{_sysconfdir}/lighttpd.conf
 
 cp -af bin inc www www-templates* $RPM_BUILD_ROOT%{_appdir}
@@ -91,10 +99,10 @@ rm -rf $RPM_BUILD_ROOT
 %triggerun -- apache1 < 1.3.37-3, apache1-base
 %webapp_unregister apache %{_webapp}
 
-%triggerin -- apache < 2.2.0, apache-base
+%triggerin -- apache-base
 %webapp_register httpd %{_webapp}
 
-%triggerun -- apache < 2.2.0, apache-base
+%triggerun -- apache-base
 %webapp_unregister httpd %{_webapp}
 
 %triggerin -- lighttpd
