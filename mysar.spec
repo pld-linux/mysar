@@ -115,7 +115,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(644,root,root,755)
 %doc CHANGELOG INSTALL README TODO UPGRADE etc/config.ini.example
 %dir %attr(750,root,http) %{_sysconfdir}
-%attr(750,root,root) %config(noreplace) /etc/cron.d/*
+%attr(640,root,root) %config(noreplace) /etc/cron.d/*
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/apache.conf
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/httpd.conf
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/lighttpd.conf
