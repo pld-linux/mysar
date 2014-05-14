@@ -2,10 +2,10 @@ Summary:	MySQL Squid Access Report
 Summary(pl.UTF-8):	Program raportujący dostęp do Squida
 Name:		mysar
 Version:	2.1.4
-Release:	2
+Release:	3
 License:	GPL
 Group:		Applications/WWW
-Source0:	http://dl.sourceforge.net/mysar/%{name}-%{version}.tar.gz
+Source0:	http://downloads.sourceforge.net/mysar/%{name}-%{version}.tar.gz
 # Source0-md5:	4b570ace1b46ec3c13e0a048e9d6cf37
 Patch0:		%{name}-smarty_path.patch
 Patch1:		%{name}-cron.patch
@@ -19,6 +19,7 @@ Requires:	webapps
 Requires:	webserver(alias)
 Requires:	webserver(indexfile)
 Requires:	webserver(php)
+Suggests:	crondaemon
 Conflicts:	apache-base < 2.4.0-1
 BuildArch:	noarch
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
@@ -38,14 +39,14 @@ aktywność użytkowników na WWW logowaną poprzez proxy squid.
 
 %package install
 Summary:	Installation scripts for mysar
-Summary(pl.UTF-8): Skrypty instalacyjne dla mysar
+Summary(pl.UTF-8):	Skrypty instalacyjne dla mysar
 Group:		Applications/WWW
 Requires:	%{name} = %{version}-%{release}
-AutoReq:	no
 AutoProv:	no
+AutoReq:	no
 
 %description install
-This package provides installation scripts for mysar. 
+This package provides installation scripts for mysar.
 
 %description install -l pl.UTF-8
 Pakiet ten dostarcza skryptów instalacyjnych dla mysar.
@@ -80,15 +81,15 @@ rm -rf $RPM_BUILD_ROOT
 install -d $RPM_BUILD_ROOT{%{_sysconfdir},%{_appdir}/etc,/etc/cron.d}
 install -d $RPM_BUILD_ROOT{%{_sharedstatedir}/%{_webapp}/smarty-tmp,/var/log/%{_webapp}}
 
-install apache.conf $RPM_BUILD_ROOT%{_sysconfdir}/apache.conf
-install httpd.conf $RPM_BUILD_ROOT%{_sysconfdir}/httpd.conf
-install lighttpd.conf $RPM_BUILD_ROOT%{_sysconfdir}/lighttpd.conf
+cp -p apache.conf $RPM_BUILD_ROOT%{_sysconfdir}/apache.conf
+cp -p httpd.conf $RPM_BUILD_ROOT%{_sysconfdir}/httpd.conf
+cp -p lighttpd.conf $RPM_BUILD_ROOT%{_sysconfdir}/lighttpd.conf
 
 cp -af bin inc www www-templates* $RPM_BUILD_ROOT%{_appdir}
 rm -f $RPM_BUILD_ROOT%{_appdir}/etc/config,ini.example $RPM_BUILD_ROOT%{_appdir}/etc/mysar.cron
 rm -rf $RPM_BUILD_ROOT%{_appdir}/bin/mysar-binary-importer
 
-install etc/mysar.cron $RPM_BUILD_ROOT/etc/cron.d
+cp -p etc/mysar.cron $RPM_BUILD_ROOT/etc/cron.d
 
 %clean
 rm -rf $RPM_BUILD_ROOT
