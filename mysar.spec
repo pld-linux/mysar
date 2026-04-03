@@ -2,7 +2,7 @@ Summary:	MySQL Squid Access Report
 Summary(pl.UTF-8):	Program raportujący dostęp do Squida
 Name:		mysar
 Version:	2.1.4
-Release:	3
+Release:	4
 License:	GPL
 Group:		Applications/WWW
 Source0:	http://downloads.sourceforge.net/mysar/%{name}-%{version}.tar.gz
