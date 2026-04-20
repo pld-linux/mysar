@@ -2,7 +2,7 @@ Summary:	MySQL Squid Access Report
 Summary(pl.UTF-8):	Program raportujący dostęp do Squida
 Name:		mysar
 Version:	2.1.4
-Release:	4
+Release:	5
 License:	GPL
 Group:		Applications/WWW
 Source0:	http://downloads.sourceforge.net/mysar/%{name}-%{version}.tar.gz
@@ -23,6 +23,8 @@ Suggests:	crondaemon
 Conflicts:	apache-base < 2.4.0-1
 BuildArch:	noarch
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
+
+%define		_noautoreq_pear		install/index.php
 
 %define		_webapps	/etc/webapps
 %define		_webapp		%{name}
